@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
 
@@ -49,14 +49,21 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Copy dist to root
+        run: |
+          # 删除根目录中的旧文件（除了.git和必要的文件）
+          find . -maxdepth 1 -type f ! -name '.git*' ! -name 'README.md' ! -name 'LICENSE' ! -name 'DEPLOY_GUIDE.md' ! -name 'README_CN.md' ! -name 'package.json' ! -name 'pnpm-lock.yaml' ! -name 'vite.config.ts' ! -name 'tsconfig.json' ! -name 'tsconfig.node.json' ! -name 'components.json' ! -name 'wrangler.toml' ! -name 'ideas.md' ! -name '.gitignore' -delete
+          # 删除根目录中的目录（除了.git和source目录）
+          find . -maxdepth 1 -type d ! -name '.' ! -name '..' ! -name '.git' ! -name '.github' ! -name 'client' ! -name 'shared' ! -name 'node_modules' ! -name 'dist' -exec rm -rf {} + 2>/dev/null || true
+          # 复制dist中的所有文件到根目录
+          cp -r dist/* .
+          # 删除dist目录
+          rm -rf dist
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit and push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git commit -m "Deploy: Update GitHub Pages" || echo "No changes to commit"
+          git push origin main || echo "No changes to push"
